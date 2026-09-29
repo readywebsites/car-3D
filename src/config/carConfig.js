@@ -1,17 +1,15 @@
 /**
- * Cinematic Automotive Configuration
+ * Premium Luxury Cinematic Automotive Configuration
  * Pure editorial automotive luxury
  */
 const scenes = [
   {
-    id: "car",
+    id: "exterior",
     index: 0,
     stageIndex: 0,
     number: "01",
-    category: "CAR REVEAL",
-    title: "THE CAR",
-    titleLine1: "THE",
-    titleLine2: "MACHINE",
+    category: "01 / EXTERIOR",
+    title: "THE MACHINE",
     quote: "Designed to be noticed.",
     videoKey: "car",
     video: "/videos/01-car.mp4",
@@ -22,10 +20,8 @@ const scenes = [
     index: 1,
     stageIndex: 1,
     number: "02",
-    category: "EXPERIENCE",
-    title: "EXPERIENCE",
-    titleLine1: "THE",
-    titleLine2: "EXPERIENCE",
+    category: "02 / EXPERIENCE",
+    title: "THE EXPERIENCE",
     quote: "Meet the machine.",
     videoKey: "woman",
     video: "/videos/02-woman.mp4",
@@ -36,18 +32,16 @@ const scenes = [
     index: 2,
     stageIndex: 2,
     number: "03",
-    category: "POWERTRAIN",
+    category: "03 / PERFORMANCE",
     title: "PERFORMANCE",
-    titleLine1: "",
-    titleLine2: "PERFORMANCE",
     quote: "Power meets precision.",
     videoKey: "engine",
     video: "/videos/03-engine.mp4",
     detail: "Power calibrated for uncompromised grand touring.",
     specs: [
-      { label: "POWER", value: "000", unit: "HP" },
-      { label: "TORQUE", value: "000", unit: "Nm" },
-      { label: "DRIVE", value: "AWD", unit: "" },
+      { label: "POWER", value: "000 HP" },
+      { label: "TORQUE", value: "000 Nm" },
+      { label: "DRIVE", value: "AWD" },
     ],
   },
   {
@@ -55,17 +49,16 @@ const scenes = [
     index: 3,
     stageIndex: 3,
     number: "04",
-    category: "SANCTUARY",
-    title: "INTERIOR",
-    titleLine1: "THE",
-    titleLine2: "CABIN",
+    category: "04 / INTERIOR",
+    title: "THE CABIN",
     quote: "Step inside.",
     videoKey: "interior",
     video: "/videos/04-interior.mp4",
     detail: "Hand-stitched sanctuary enveloped in acoustic calm.",
     endCta: {
-      headline: "EXPERIENCE THE DIFFERENCE",
-      buttonText: "EXPLORE",
+      headline: "THE NEW EXPERIENCE",
+      subheadline: "Made to move you.",
+      buttonText: "EXPLORE THE CAR",
     },
   },
 ];
@@ -82,6 +75,7 @@ export const carConfig = {
     interior: "/videos/04-interior.mp4",
   },
 
+  // Premium specifications - easily configurable without inventing real values
   performance: {
     power: "000 HP",
     torque: "000 Nm",
@@ -89,10 +83,10 @@ export const carConfig = {
   },
 
   navItems: [
-    { id: "car", index: 0, stageIndex: 0, label: "01 CAR", shortLabel: "CAR", number: "01" },
-    { id: "experience", index: 1, stageIndex: 1, label: "02 EXPERIENCE", shortLabel: "EXPERIENCE", number: "02" },
-    { id: "performance", index: 2, stageIndex: 2, label: "03 PERFORMANCE", shortLabel: "PERFORMANCE", number: "03" },
-    { id: "interior", index: 3, stageIndex: 3, label: "04 INTERIOR", shortLabel: "INTERIOR", number: "04" },
+    { id: "exterior", index: 0, stageIndex: 0, label: "EXTERIOR", shortLabel: "EXTERIOR", number: "01" },
+    { id: "experience", index: 1, stageIndex: 1, label: "EXPERIENCE", shortLabel: "EXPERIENCE", number: "02" },
+    { id: "performance", index: 2, stageIndex: 2, label: "PERFORMANCE", shortLabel: "PERFORMANCE", number: "03" },
+    { id: "interior", index: 3, stageIndex: 3, label: "INTERIOR", shortLabel: "INTERIOR", number: "04" },
   ],
 
   scenes,

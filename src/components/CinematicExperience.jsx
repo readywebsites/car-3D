@@ -1,49 +1,43 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { carConfig } from "../config/carConfig";
-import { ArrowRight } from "lucide-react";
-import { audioEngine } from "../utils/audioEngine";
-
-gsap.registerPlugin(ScrollTrigger);
-
-if (typeof window !== "undefined") {
-  window.ScrollTrigger = ScrollTrigger;
-}
+import { ArrowRight, ChevronDown } from "lucide-react";
 
 /**
- * CinematicExperience
- * 
- * Unifies all four automotive sections into ONE continuous luxury cinematic scrolling commercial.
+ * Premium Luxury Cinematic Automotive Experience
  *
- * Sequence:
- * 01 — CAR EXTERIOR (/videos/01-car.mp4)
- * ↓
- * 02 — WOMAN + CAR (/videos/02-woman.mp4)
- * ↓
- * 03 — ENGINE / PERFORMANCE (/videos/03-engine.mp4)
- * ↓
- * 04 — INTERIOR (/videos/04-interior.mp4)
+ * Requirements:
+ * - 4 Full-screen 100svh cinematic video sections:
+ *   01 — CAR EXTERIOR (/videos/01-car.mp4)
+ *   02 — WOMAN + CAR (/videos/02-woman.mp4)
+ *   03 — ENGINE / PERFORMANCE (/videos/03-engine.mp4)
+ *   04 — INTERIOR (/videos/04-interior.mp4)
  *
- * Key Architecture:
- * - Single sticky 100svh cinematic viewport (No multiple normal page sections).
- * - User scroll strictly controls each video's timeline (video.currentTime = progress * video.duration).
- * - Each section has its own dedicated scroll range.
- * - Transitions between scenes: previous video fades out, next video fades in from first frame,
- *   using opacity, scale, blur, translateY.
- * - Responsive across Desktop, Tablet, and Mobile.
+ * Strict Video Behavior:
+ * - NO video scrubbing. video.currentTime is NEVER hooked to scroll.
+ * - Videos play normally from 0 seconds to final second (autoplay, muted, loop, playsInline).
+ * - Scrolling ONLY navigates between the 4 full-screen sections.
+ *
+ * Subtle GSAP Transitions:
+ * - Section 01 -> 02: fade / slight scale
+ * - Section 02 -> 03: fade / slight blur
+ * - Section 03 -> 04: smooth fade
+ *
+ * Aesthetic:
+ * - Pure luxury monochrome: Black, White, Dark Charcoal, Subtle Gray.
+ * - Subtle overlay: linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.05)).
+ * - Minimal Manrope & Inter typography.
  */
 export default function CinematicExperience({
+  activeStage = 0,
   onStageChange,
   onProgressChange,
   onExplore,
   enabled = true,
 }) {
   const masterContainerRef = useRef(null);
-  const stickyViewportRef = useRef(null);
-  const parallaxLayerRef = useRef(null);
 
-  // 4 Scene Layer Refs
+  // 4 Section Container Refs (both IDs for compatibility with all tests & scripts)
   const sec0Ref = useRef(null);
   const sec1Ref = useRef(null);
   const sec2Ref = useRef(null);
@@ -55,64 +49,48 @@ export default function CinematicExperience({
   const v2Ref = useRef(null);
   const v3Ref = useRef(null);
 
-  // Content & Typography Refs
+  // Typography & Content Refs
   const text0Ref = useRef(null);
-  const prompt0Ref = useRef(null);
+  const cue0Ref = useRef(null);
   const text1Ref = useRef(null);
   const text2Ref = useRef(null);
   const specs2Ref = useRef(null);
   const text3Ref = useRef(null);
   const hero3Ref = useRef(null);
 
-  // Video seeking controllers
-  const scrubbersRef = useRef([]);
+  // Stage transition management
+  const currentStageRef = useRef(0);
+  const isTransitioningRef = useRef(false);
+  const touchStartYRef = useRef(null);
+  const lastWheelTimeRef = useRef(0);
 
-  // Specifications from carConfig
+  // Specifications from carConfig (easily editable in config file)
   const specsData = [
     { label: "POWER", value: carConfig.performance?.power || "000 HP" },
     { label: "TORQUE", value: carConfig.performance?.torque || "000 Nm" },
     { label: "DRIVE", value: carConfig.performance?.drive || "AWD" },
   ];
 
-  // Subtle Desktop Mouse Parallax (Restrained luxury camera depth)
+  // Ensure all videos play continuously and normally without scrubbing
   useEffect(() => {
-    const stage = stickyViewportRef.current;
-    const layer = parallaxLayerRef.current;
-    if (!stage || !layer) return;
-
-    const isTouch = window.matchMedia("(pointer: coarse)").matches;
-    if (isTouch) return;
-
-    const quickX = gsap.quickTo(layer, "x", { duration: 1.2, ease: "power2.out" });
-    const quickY = gsap.quickTo(layer, "y", { duration: 1.2, ease: "power2.out" });
-
-    const handleMouseMove = (e) => {
-      const rect = stage.getBoundingClientRect();
-      const normX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      const normY = ((e.clientY - rect.top) / rect.height) * 2 - 1;
-      quickX(normX * 8);
-      quickY(normY * 5);
-    };
-
-    const handleMouseLeave = () => {
-      quickX(0);
-      quickY(0);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove, { passive: true });
-    window.addEventListener("mouseleave", handleMouseLeave, { passive: true });
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseleave", handleMouseLeave);
-    };
+    const videos = [v0Ref.current, v1Ref.current, v2Ref.current, v3Ref.current];
+    videos.forEach((video) => {
+      if (video) {
+        video.muted = true;
+        video.playsInline = true;
+        video.loop = true;
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {
+            // Autoplay gracefully handled
+          });
+        }
+      }
+    });
   }, []);
 
-  // Initialize and orchestrate GSAP Timeline + ScrollTrigger
+  // Initialize visual states on mount
   useEffect(() => {
-    if (!enabled || !masterContainerRef.current) return;
-
-    const container = masterContainerRef.current;
     const sec0 = sec0Ref.current;
     const sec1 = sec1Ref.current;
     const sec2 = sec2Ref.current;
@@ -122,422 +100,374 @@ export default function CinematicExperience({
     const v1 = v1Ref.current;
     const v2 = v2Ref.current;
     const v3 = v3Ref.current;
-    const videos = [v0, v1, v2, v3];
-
-    // Initialize Video Scrubbers with non-blocking seek queues
-    scrubbersRef.current = videos.map((video) => {
-      const state = {
-        targetTime: 0,
-        lastTime: -1,
-        seeking: false,
-        pendingTime: null,
-        seekTimeout: null,
-      };
-
-      if (video) {
-        video.pause();
-        video.currentTime = 0.001; // Render opening frame immediately
-
-        const onSeeked = () => {
-          state.seeking = false;
-          if (state.seekTimeout) {
-            clearTimeout(state.seekTimeout);
-            state.seekTimeout = null;
-          }
-          if (state.pendingTime !== null) {
-            const nextTime = state.pendingTime;
-            state.pendingTime = null;
-            applySeek(video, nextTime, state);
-          }
-        };
-
-        const onSeeking = () => {
-          state.seeking = true;
-          if (state.seekTimeout) clearTimeout(state.seekTimeout);
-          state.seekTimeout = setTimeout(() => {
-            state.seeking = false;
-          }, 120);
-        };
-
-        video.addEventListener("seeked", onSeeked);
-        video.addEventListener("seeking", onSeeking);
-
-        state._cleanup = () => {
-          video.removeEventListener("seeked", onSeeked);
-          video.removeEventListener("seeking", onSeeking);
-          if (state.seekTimeout) clearTimeout(state.seekTimeout);
-        };
-      }
-      return state;
-    });
-
-    function applySeek(video, time, state) {
-      if (!video) return;
-      state.seeking = true;
-      state.lastTime = time;
-      try {
-        video.currentTime = time;
-      } catch {
-        state.seeking = false;
-      }
-    }
-
-    function scrubVideo(index, progressNormalized) {
-      const video = videos[index];
-      const state = scrubbersRef.current[index];
-      if (!video || !state) return;
-
-      const duration =
-        video.duration && !isNaN(video.duration) && video.duration > 0
-          ? video.duration
-          : 8.0;
-
-      const clampedTime = Math.max(0, Math.min(duration - 0.03, progressNormalized * duration));
-      if (Math.abs(state.lastTime - clampedTime) < 0.02) return;
-
-      state.targetTime = clampedTime;
-
-      if (state.seeking) {
-        state.pendingTime = clampedTime;
-      } else {
-        applySeek(video, clampedTime, state);
-      }
-    }
 
     const t0 = text0Ref.current;
-    const p0 = prompt0Ref.current;
+    const c0 = cue0Ref.current;
     const t1 = text1Ref.current;
     const t2 = text2Ref.current;
     const s2 = specs2Ref.current;
     const t3 = text3Ref.current;
     const h3 = hero3Ref.current;
 
-    let lastStage = -1;
+    // Set initial layer visibility & styles
+    // Section 01 active initially
+    gsap.set(sec0, { opacity: 1, zIndex: 10, pointerEvents: "auto" });
+    gsap.set(v0, { opacity: 1, scale: 1.0, filter: "blur(0px)" });
+    gsap.set(t0, { opacity: 1, y: 0 });
+    if (c0) gsap.set(c0, { opacity: 1, y: 0 });
 
-    const ctx = gsap.context(() => {
-      // -------------------------------------------------------------------------
-      // INITIAL ELEMENT STATES
-      // -------------------------------------------------------------------------
-      // Stacking context on scene layers
-      gsap.set(sec0, { zIndex: 4 });
-      gsap.set(sec1, { zIndex: 1 });
-      gsap.set(sec2, { zIndex: 1 });
-      gsap.set(sec3, { zIndex: 1 });
+    // Sections 02, 03, 04 hidden initially
+    gsap.set(sec1, { opacity: 0, zIndex: 1, pointerEvents: "none" });
+    gsap.set(v1, { opacity: 0, scale: 1.0, filter: "blur(0px)" });
+    gsap.set(t1, { opacity: 0, y: 25 });
 
-      // Video 0 starts visible and hero
-      gsap.set(v0, { opacity: 1, scale: 1.08, filter: "blur(0px)", y: 0 });
-      // Videos 1, 2, 3 start hidden and blurred
-      gsap.set(v1, { opacity: 0, scale: 1.05, filter: "blur(4px)", y: 20 });
-      gsap.set(v2, { opacity: 0, scale: 1.05, filter: "blur(4px)", y: 20 });
-      gsap.set(v3, { opacity: 0, scale: 1.08, filter: "blur(4px)", y: 15 });
+    gsap.set(sec2, { opacity: 0, zIndex: 1, pointerEvents: "none" });
+    gsap.set(v2, { opacity: 0, scale: 1.0, filter: "blur(0px)" });
+    gsap.set(t2, { opacity: 0, y: 25 });
+    if (s2) {
+      const items = s2.querySelectorAll(".spec-item");
+      gsap.set(items, { opacity: 0, y: 15 });
+    }
 
-      // Typography initial states
-      gsap.set(t0, { opacity: 1, y: 0, scale: 1.0 });
-      if (p0) gsap.set(p0, { opacity: 1, y: 0 });
-      gsap.set(t1, { opacity: 0, y: 35, scale: 0.95 });
-      gsap.set(t2, { opacity: 0, y: 35, scale: 0.95 });
-      if (s2) {
-        const specItems = s2.querySelectorAll(".spec-item");
-        gsap.set(specItems, { opacity: 0, y: 20, scale: 0.95 });
-      }
-      gsap.set(t3, { opacity: 0, y: 35, scale: 0.95 });
-      if (h3) gsap.set(h3, { opacity: 0, y: 35, scale: 0.96, pointerEvents: "none" });
+    gsap.set(sec3, { opacity: 0, zIndex: 1, pointerEvents: "none" });
+    gsap.set(v3, { opacity: 0, scale: 1.0, filter: "blur(0px)" });
+    gsap.set(t3, { opacity: 0, y: 25 });
+    if (h3) gsap.set(h3, { opacity: 0, y: 20 });
+  }, []);
 
-      // -------------------------------------------------------------------------
-      // MASTER SCROLLTRIGGER TIMELINE (0 to 100 progress scale)
-      // -------------------------------------------------------------------------
-      const masterTl = gsap.timeline({
-        scrollTrigger: {
-          trigger: container,
-          start: "top top",
-          end: "bottom bottom",
-          scrub: true,
-          onUpdate: (self) => {
-            const p = self.progress;
+  // Execute subtle GSAP section transition
+  const executeTransition = useCallback((fromStage, toStage) => {
+    if (fromStage === toStage) return;
 
-            // Report progress to parent navbar / scrollprogress
-            if (onProgressChange) onProgressChange(p);
+    const sections = [sec0Ref.current, sec1Ref.current, sec2Ref.current, sec3Ref.current];
+    const videos = [v0Ref.current, v1Ref.current, v2Ref.current, v3Ref.current];
+    const texts = [text0Ref.current, text1Ref.current, text2Ref.current, text3Ref.current];
 
-            // Active Stage determination:
-            // 0: CAR (0.00 - 0.24)
-            // 1: EXPERIENCE (0.24 - 0.49)
-            // 2: PERFORMANCE (0.49 - 0.74)
-            // 3: INTERIOR (0.74 - 1.00)
-            let stage = 0;
-            if (p >= 0.74) {
-              stage = 3;
-            } else if (p >= 0.49) {
-              stage = 2;
-            } else if (p >= 0.24) {
-              stage = 1;
-            } else {
-              stage = 0;
-            }
+    const outSec = sections[fromStage];
+    const inSec = sections[toStage];
+    const outVid = videos[fromStage];
+    const inVid = videos[toStage];
+    const outText = texts[fromStage];
+    const inText = texts[toStage];
 
-            if (lastStage !== stage) {
-              lastStage = stage;
-              if (onStageChange) onStageChange(stage);
-            }
+    if (!outSec || !inSec || !outVid || !inVid) return;
 
-            // SCRUB VIDEO TIMELINES ACROSS SCROLL RANGES:
-            // 01 CAR: P in [0.00, 0.22] -> progress [0, 1]
-            if (p <= 0.26) {
-              const norm0 = Math.max(0, Math.min(1, p / 0.22));
-              scrubVideo(0, norm0);
-            }
+    isTransitioningRef.current = true;
 
-            // 02 WOMAN: P in [0.24, 0.46] -> progress [0, 1]
-            if (p >= 0.20 && p <= 0.52) {
-              const norm1 = Math.max(0, Math.min(1, (p - 0.24) / (0.46 - 0.24)));
-              scrubVideo(1, norm1);
-            }
+    // Bring incoming section above outgoing section
+    gsap.set(inSec, { zIndex: 15, pointerEvents: "auto" });
+    gsap.set(outSec, { zIndex: 10, pointerEvents: "none" });
 
-            // 03 ENGINE: P in [0.49, 0.71] -> progress [0, 1]
-            if (p >= 0.45 && p <= 0.76) {
-              const norm2 = Math.max(0, Math.min(1, (p - 0.49) / (0.71 - 0.49)));
-              scrubVideo(2, norm2);
-            }
-
-            // 04 INTERIOR: P in [0.74, 0.94] -> progress [0, 1]
-            // 0% -> beginning, 25% -> dashboard, 50% -> steering, 75% -> seats, 100% -> final hero frame
-            if (p >= 0.70) {
-              const norm3 = Math.max(0, Math.min(1, (p - 0.74) / (0.94 - 0.74)));
-              scrubVideo(3, norm3);
-            }
-
-            // Ambient audio modulation based on scroll velocity
-            const velocity = Math.abs(self.getVelocity() || 0);
-            audioEngine.modulate(velocity / 1200);
-          },
-        },
-      });
-
-      // -------------------------------------------------------------------------
-      // SECTION 01: CAR EXTERIOR (0 to 25 timeline points)
-      // -------------------------------------------------------------------------
-      // Prompt fades immediately
-      if (p0) {
-        masterTl.to(p0, { opacity: 0, y: -20, duration: 3, ease: "power1.out" }, 1);
-      }
-
-      // Video 0 scale settles: 1.08 -> 1.0
-      masterTl.to(v0, { scale: 1.0, duration: 18, ease: "power1.out" }, 0);
-
-      // Text 0 fades and recedes before transition
-      masterTl.to(t0, { opacity: 0, y: -25, scale: 0.98, duration: 5, ease: "power2.in" }, 17);
-
-      // TRANSITION 01 -> 02: CAR -> WOMAN (19 to 26)
-      // Raise sec1 stacking order
-      masterTl.set(sec1, { zIndex: 5 }, 19);
-
-      // Video 0: opacity 1 -> 0, scale 1 -> 1.05, blur 0 -> 4px, translateY 0 -> -20px
-      masterTl.to(
-        v0,
-        {
+    // Transition between Section 01 and Section 02: fade / slight scale
+    if ((fromStage === 0 && toStage === 1) || (fromStage === 1 && toStage === 0)) {
+      if (fromStage === 0 && toStage === 1) {
+        // 01 -> 02: fade / slight scale
+        gsap.to(outSec, {
           opacity: 0,
-          scale: 1.05,
-          filter: "blur(4px)",
-          y: -20,
-          duration: 7,
+          scale: 1.04,
+          duration: 0.75,
           ease: "power2.inOut",
-        },
-        19
-      );
-
-      // Video 1 starts from first frame and fades in:
-      // opacity 0 -> 1, scale 1.05 -> 1.0, blur 4px -> 0, translateY 20px -> 0px
-      masterTl.to(
-        v1,
-        {
-          opacity: 1,
-          scale: 1.0,
-          filter: "blur(0px)",
-          y: 0,
-          duration: 7,
-          ease: "power2.inOut",
-        },
-        19
-      );
-
-      // -------------------------------------------------------------------------
-      // SECTION 02: WOMAN + CAR (25 to 50 timeline points)
-      // -------------------------------------------------------------------------
-      // Text 1 enters
-      masterTl.to(t1, { opacity: 1, y: 0, scale: 1.0, duration: 6, ease: "power2.out" }, 24);
-
-      // Video 1 slight continuous camera drift
-      masterTl.to(v1, { scale: 1.03, duration: 16, ease: "none" }, 26);
-
-      // Text 1 exits
-      masterTl.to(t1, { opacity: 0, y: -25, scale: 0.98, duration: 5, ease: "power2.in" }, 41);
-
-      // TRANSITION 02 -> 03: WOMAN -> ENGINE (44 to 51)
-      // Raise sec2 stacking order
-      masterTl.set(sec2, { zIndex: 6 }, 44);
-
-      // Video 1: opacity 1 -> 0, scale 1 -> 1.05, blur 0 -> 4px, translateY 0 -> -20px
-      masterTl.to(
-        v1,
-        {
-          opacity: 0,
-          scale: 1.05,
-          filter: "blur(4px)",
-          y: -20,
-          duration: 7,
-          ease: "power2.inOut",
-        },
-        44
-      );
-
-      // Video 2 starts from first frame:
-      // opacity 0 -> 1, scale 1.05 -> 1.0, blur 4px -> 0, translateY 20px -> 0px
-      masterTl.to(
-        v2,
-        {
-          opacity: 1,
-          scale: 1.0,
-          filter: "blur(0px)",
-          y: 0,
-          duration: 7,
-          ease: "power2.inOut",
-        },
-        44
-      );
-
-      // -------------------------------------------------------------------------
-      // SECTION 03: ENGINE / PERFORMANCE (50 to 75 timeline points)
-      // -------------------------------------------------------------------------
-      // Text 2 enters
-      masterTl.to(t2, { opacity: 1, y: 0, scale: 1.0, duration: 6, ease: "power2.out" }, 49);
-
-      // Specifications staggered entrance
-      if (s2) {
-        const specItems = s2.querySelectorAll(".spec-item");
-        masterTl.to(
-          specItems,
-          {
-            opacity: 1,
-            y: 0,
-            scale: 1.0,
-            stagger: 1.2,
-            duration: 5,
-            ease: "power2.out",
-          },
-          52
-        );
-      }
-
-      // Video 2 drift
-      masterTl.to(v2, { scale: 1.03, duration: 15, ease: "none" }, 51);
-
-      // Text 2 & Specs exit
-      masterTl.to(t2, { opacity: 0, y: -25, scale: 0.98, duration: 5, ease: "power2.in" }, 66);
-      if (s2) {
-        const specItems = s2.querySelectorAll(".spec-item");
-        masterTl.to(
-          specItems,
-          {
-            opacity: 0,
-            y: -15,
-            scale: 0.98,
-            stagger: 0.8,
-            duration: 4,
-            ease: "power2.in",
-          },
-          67
-        );
-      }
-
-      // TRANSITION 03 -> 04: ENGINE -> INTERIOR (Camera enters the car) (69 to 76)
-      // Raise sec3 stacking order
-      masterTl.set(sec3, { zIndex: 7 }, 69);
-
-      // Video 2 pushes inward: scale 1 -> 1.08, opacity 1 -> 0, blur 0 -> 4px, y: 0 -> -15px
-      masterTl.to(
-        v2,
-        {
-          opacity: 0,
-          scale: 1.08,
-          filter: "blur(4px)",
-          y: -15,
-          duration: 7,
-          ease: "power2.inOut",
-        },
-        69
-      );
-
-      // Video 3 pulls from scale 1.08 -> 1.0, blur 4px -> 0, opacity 0 -> 1, y: 15px -> 0px
-      masterTl.to(
-        v3,
-        {
-          opacity: 1,
-          scale: 1.0,
-          filter: "blur(0px)",
-          y: 0,
-          duration: 7,
-          ease: "power2.inOut",
-        },
-        69
-      );
-
-      // -------------------------------------------------------------------------
-      // SECTION 04: LUXURY INTERIOR & FINAL HERO CLIMAX (75 to 100 timeline points)
-      // -------------------------------------------------------------------------
-      // Initial Cabin text enters: 04 / INTERIOR, THE CABIN, "Step inside."
-      masterTl.to(t3, { opacity: 1, y: 0, scale: 1.0, duration: 6, ease: "power2.out" }, 74);
-
-      // Initial Cabin text exits as user explores cockpit
-      masterTl.to(t3, { opacity: 0, y: -25, scale: 0.98, duration: 5, ease: "power2.in" }, 86);
-
-      // Final Hero Climax enters at video end:
-      // THE NEW EXPERIENCE / "Made to move you." / EXPLORE THE CAR
-      if (h3) {
-        masterTl.to(
-          h3,
-          {
-            opacity: 1,
-            y: 0,
-            scale: 1.0,
-            duration: 8,
-            ease: "power2.out",
-            onStart: () => {
-              h3.style.pointerEvents = "auto";
-            },
-            onReverseComplete: () => {
-              h3.style.pointerEvents = "none";
-            },
-          },
-          90
-        );
-      }
-
-      // Final frame hold
-      masterTl.to({}, { duration: 0.1 }, 100);
-
-      // -------------------------------------------------------------------------
-      // SECTION MARKER SCROLLTRIGGERS FOR BACKWARD COMPATIBILITY & TEST SELECTORS
-      // -------------------------------------------------------------------------
-      const tracks = container.querySelectorAll(".scene-track");
-      if (tracks.length === 4) {
-        const ids = ["section-exterior", "section-02", "section-03", "section-04"];
-        tracks.forEach((track, idx) => {
-          ScrollTrigger.create({
-            id: ids[idx],
-            trigger: track,
-            start: "top top",
-            end: "bottom top",
-            scrub: true,
-          });
         });
-      }
+        gsap.to(outVid, { opacity: 0, duration: 0.75, ease: "power2.inOut" });
 
-      ScrollTrigger.refresh();
-    }, container);
+        gsap.fromTo(
+          inSec,
+          { opacity: 0, scale: 1.02, filter: "none" },
+          { opacity: 1, scale: 1.0, filter: "none", duration: 0.75, ease: "power2.inOut" }
+        );
+        gsap.to(inVid, { opacity: 1, duration: 0.75, ease: "power2.inOut" });
+      } else {
+        // 02 -> 01: restore
+        gsap.to(outSec, {
+          opacity: 0,
+          scale: 1.02,
+          duration: 0.75,
+          ease: "power2.inOut",
+        });
+        gsap.to(outVid, { opacity: 0, duration: 0.75, ease: "power2.inOut" });
+
+        gsap.fromTo(
+          inSec,
+          { opacity: 0, scale: 1.04 },
+          { opacity: 1, scale: 1.0, duration: 0.75, ease: "power2.inOut" }
+        );
+        gsap.to(inVid, { opacity: 1, duration: 0.75, ease: "power2.inOut" });
+      }
+    }
+    // Transition between Section 02 and Section 03: fade / slight blur
+    else if ((fromStage === 1 && toStage === 2) || (fromStage === 2 && toStage === 1)) {
+      if (fromStage === 1 && toStage === 2) {
+        // 02 -> 03: fade / slight blur
+        gsap.to(outSec, {
+          opacity: 0,
+          filter: "blur(6px)",
+          duration: 0.75,
+          ease: "power2.inOut",
+        });
+        gsap.to(outVid, { opacity: 0, duration: 0.75, ease: "power2.inOut" });
+
+        gsap.fromTo(
+          inSec,
+          { opacity: 0, filter: "blur(4px)", scale: 1.0 },
+          { opacity: 1, filter: "blur(0px)", scale: 1.0, duration: 0.75, ease: "power2.inOut" }
+        );
+        gsap.to(inVid, { opacity: 1, duration: 0.75, ease: "power2.inOut" });
+      } else {
+        // 03 -> 02: restore blur clear
+        gsap.to(outSec, {
+          opacity: 0,
+          duration: 0.75,
+          ease: "power2.inOut",
+        });
+        gsap.to(outVid, { opacity: 0, duration: 0.75, ease: "power2.inOut" });
+
+        gsap.fromTo(
+          inSec,
+          { opacity: 0, filter: "blur(6px)" },
+          { opacity: 1, filter: "blur(0px)", duration: 0.75, ease: "power2.inOut" }
+        );
+        gsap.to(inVid, { opacity: 1, duration: 0.75, ease: "power2.inOut" });
+      }
+    }
+    // Transition between Section 03 and Section 04: smooth fade
+    else if ((fromStage === 2 && toStage === 3) || (fromStage === 3 && toStage === 2)) {
+      // 03 <-> 04: smooth fade
+      gsap.to(outSec, {
+        opacity: 0,
+        duration: 0.75,
+        ease: "power2.inOut",
+      });
+      gsap.to(outVid, { opacity: 0, duration: 0.75, ease: "power2.inOut" });
+
+      gsap.fromTo(
+        inSec,
+        { opacity: 0, filter: "none", scale: 1.0 },
+        { opacity: 1, filter: "none", scale: 1.0, duration: 0.75, ease: "power2.inOut" }
+      );
+      gsap.to(inVid, { opacity: 1, duration: 0.75, ease: "power2.inOut" });
+    }
+    // Multi-stage direct jump (e.g. 0 -> 3 via navbar or indicator)
+    else {
+      gsap.to(outSec, { opacity: 0, duration: 0.6, ease: "power2.inOut" });
+      gsap.to(outVid, { opacity: 0, duration: 0.6, ease: "power2.inOut" });
+
+      gsap.fromTo(
+        inSec,
+        { opacity: 0, filter: "none", scale: 1.0 },
+        { opacity: 1, filter: "none", scale: 1.0, duration: 0.6, ease: "power2.inOut" }
+      );
+      gsap.to(inVid, { opacity: 1, duration: 0.6, ease: "power2.inOut" });
+    }
+
+    // Outgoing Text Animation
+    if (outText) {
+      gsap.to(outText, { opacity: 0, y: -20, duration: 0.35, ease: "power2.in" });
+    }
+    if (fromStage === 0 && cue0Ref.current) {
+      gsap.to(cue0Ref.current, { opacity: 0, duration: 0.3 });
+    }
+
+    // Incoming Text Animation
+    if (inText) {
+      gsap.fromTo(
+        inText,
+        { opacity: 0, y: 25 },
+        { opacity: 1, y: 0, duration: 0.6, delay: 0.15, ease: "power2.out" }
+      );
+    }
+    if (toStage === 0 && cue0Ref.current) {
+      gsap.fromTo(
+        cue0Ref.current,
+        { opacity: 0 },
+        { opacity: 1, duration: 0.6, delay: 0.2 }
+      );
+    }
+
+    // Section 03 Specifications entrance
+    if (toStage === 2 && specs2Ref.current) {
+      const items = specs2Ref.current.querySelectorAll(".spec-item");
+      gsap.fromTo(
+        items,
+        { opacity: 0, y: 15 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.5,
+          delay: 0.25,
+          stagger: 0.08,
+          ease: "power2.out",
+        }
+      );
+    }
+
+    // Section 04 Climax CTA entrance
+    if (toStage === 3 && hero3Ref.current) {
+      gsap.fromTo(
+        hero3Ref.current,
+        { opacity: 0, y: 20 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.6,
+          delay: 0.25,
+          ease: "power2.out",
+        }
+      );
+    }
+
+    // Cooldown lock release
+    const timer = setTimeout(() => {
+      sections.forEach((s, idx) => {
+        if (s && idx !== toStage) {
+          gsap.set(s, { zIndex: 1, pointerEvents: "none" });
+        }
+      });
+      isTransitioningRef.current = false;
+    }, 750);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Sync stage changes from parent (Navbar clicks, indicator clicks, or scroll navigation)
+  useEffect(() => {
+    if (!enabled) return;
+    if (activeStage !== currentStageRef.current) {
+      const prev = currentStageRef.current;
+      currentStageRef.current = activeStage;
+      executeTransition(prev, activeStage);
+    }
+  }, [activeStage, enabled, executeTransition]);
+
+  // Navigate to target section with smooth scrolling
+  const navigateToSection = useCallback(
+    (targetIndex) => {
+      const clamped = Math.max(0, Math.min(3, targetIndex));
+      if (clamped === currentStageRef.current) return;
+
+      if (onStageChange) onStageChange(clamped);
+
+      // Smooth scroll the document so native scroll position remains aligned
+      const totalScrollable = document.documentElement.scrollHeight - window.innerHeight;
+      const targetScroll = (clamped / 3) * totalScrollable;
+      window.scrollTo({ top: targetScroll, behavior: "smooth" });
+    },
+    [onStageChange]
+  );
+
+  // Wheel listener: moves user between the 4 sections smoothly
+  useEffect(() => {
+    if (!enabled) return;
+
+    const handleWheel = (e) => {
+      const now = Date.now();
+      if (now - lastWheelTimeRef.current < 750) return;
+      if (isTransitioningRef.current) return;
+
+      if (Math.abs(e.deltaY) > 25) {
+        if (e.deltaY > 0 && currentStageRef.current < 3) {
+          lastWheelTimeRef.current = now;
+          navigateToSection(currentStageRef.current + 1);
+        } else if (e.deltaY < 0 && currentStageRef.current > 0) {
+          lastWheelTimeRef.current = now;
+          navigateToSection(currentStageRef.current - 1);
+        }
+      }
+    };
+
+    window.addEventListener("wheel", handleWheel, { passive: true });
+    return () => window.removeEventListener("wheel", handleWheel);
+  }, [enabled, navigateToSection]);
+
+  // Touch Swipe listener for mobile & tablet
+  useEffect(() => {
+    if (!enabled) return;
+
+    const handleTouchStart = (e) => {
+      touchStartYRef.current = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = (e) => {
+      if (touchStartYRef.current === null) return;
+      if (isTransitioningRef.current) return;
+
+      const touchEndY = e.changedTouches[0].clientY;
+      const diffY = touchStartYRef.current - touchEndY;
+      touchStartYRef.current = null;
+
+      if (Math.abs(diffY) > 40) {
+        if (diffY > 0 && currentStageRef.current < 3) {
+          navigateToSection(currentStageRef.current + 1);
+        } else if (diffY < 0 && currentStageRef.current > 0) {
+          navigateToSection(currentStageRef.current - 1);
+        }
+      }
+    };
+
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
 
     return () => {
-      ctx.revert();
-      scrubbersRef.current.forEach((st) => st._cleanup?.());
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
     };
+  }, [enabled, navigateToSection]);
+
+  // Keyboard navigation (ArrowDown, ArrowUp, PageDown, PageUp, Space)
+  useEffect(() => {
+    if (!enabled) return;
+
+    const handleKeyDown = (e) => {
+      if (isTransitioningRef.current) return;
+
+      if (["ArrowDown", "PageDown", " "].includes(e.key)) {
+        if (currentStageRef.current < 3) {
+          e.preventDefault();
+          navigateToSection(currentStageRef.current + 1);
+        }
+      } else if (["ArrowUp", "PageUp"].includes(e.key)) {
+        if (currentStageRef.current > 0) {
+          e.preventDefault();
+          navigateToSection(currentStageRef.current - 1);
+        }
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        navigateToSection(0);
+      } else if (e.key === "End") {
+        e.preventDefault();
+        navigateToSection(3);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [enabled, navigateToSection]);
+
+  // Native Scroll sync (handles scrollbar dragging or programmatic window.scrollTo in tests)
+  useEffect(() => {
+    if (!enabled) return;
+
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      if (maxScroll <= 0) return;
+
+      const p = Math.max(0, Math.min(1, scrollY / maxScroll));
+      if (onProgressChange) onProgressChange(p);
+
+      // Determine active section from scroll position
+      let stage = 0;
+      if (p >= 0.72) stage = 3;
+      else if (p >= 0.45) stage = 2;
+      else if (p >= 0.18) stage = 1;
+      else stage = 0;
+
+      if (stage !== currentStageRef.current && !isTransitioningRef.current) {
+        if (onStageChange) onStageChange(stage);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, [enabled, onProgressChange, onStageChange]);
 
   return (
@@ -545,331 +475,303 @@ export default function CinematicExperience({
       ref={masterContainerRef}
       id="cinematic-master-story"
       className="relative w-full bg-[#050505] text-white"
-      style={{
-        height: "480vh",
-      }}
     >
-      {/* 4 SCENE SCROLL TRACKS (Used by ScrollTrigger & smooth navigation targets) */}
-      <div className="absolute inset-0 w-full h-full pointer-events-none z-0">
-        <div id="section-exterior-track" className="scene-track h-[120vh]" />
-        <div id="section-02-track" className="scene-track h-[120vh]" />
-        <div id="section-03-track" className="scene-track h-[120vh]" />
-        <div id="section-04-track" className="scene-track h-[120vh]" />
+      {/* Scroll tracks for page height and scrollbar navigation */}
+      <div className="relative w-full h-[400svh] pointer-events-none z-0">
+        <div id="section-exterior-track" className="scene-track h-[100svh]" />
+        <div id="section-02-track" className="scene-track h-[100svh]" />
+        <div id="section-03-track" className="scene-track h-[100svh]" />
+        <div id="section-04-track" className="scene-track h-[100svh]" />
       </div>
 
       {/* ========================================================================= */}
-      {/* SINGLE STICKY 100svh CINEMATIC VIEWPORT (PINNED FOR ENTIRE COMMERCIAL)    */}
+      {/* FIXED 100svh CINEMATIC STAGE (All 4 videos play normally, 100% full screen) */}
       {/* ========================================================================= */}
       <div
-        ref={stickyViewportRef}
-        className="sticky top-0 left-0 w-full h-screen h-[100svh] overflow-hidden select-none bg-[#050505] z-10"
-        style={{
-          width: "100vw",
-          height: "100svh",
-        }}
+        className="fixed inset-0 w-full h-[100svh] overflow-hidden select-none bg-[#050505] z-10 pointer-events-auto"
+        style={{ width: "100vw", height: "100svh" }}
       >
-        {/* PARALLAX CONTAINER (Provides subtle camera depth on desktop) */}
-        <div
-          ref={parallaxLayerRef}
-          className="absolute inset-[-2%] w-[104%] h-[104%] will-change-transform z-[1]"
+        {/* ===================================================================== */}
+        {/* SECTION 01 — CAR EXTERIOR                                             */}
+        {/* ===================================================================== */}
+        <section
+          ref={sec0Ref}
+          id="section-01"
+          data-section="exterior"
+          className="absolute inset-0 w-full h-full will-change-transform will-change-[opacity]"
         >
-          {/* ======================================================== */}
-          {/* SCENE 01: CAR EXTERIOR                                   */}
-          {/* ======================================================== */}
+          {/* Legacy ID element for backward-compatibility with tests */}
+          <div id="section-exterior" className="absolute inset-0 w-full h-full pointer-events-none" />
+
+          {/* Full-screen Video 01: Plays normally from 0s to end, loop, autoplay, muted */}
+          <video
+            ref={v0Ref}
+            src="/videos/01-car.mp4"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            tabIndex={-1}
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none will-change-transform will-change-[opacity]"
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+
+          {/* Subtle Cinematic Overlay: linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.05)) */}
           <div
-            ref={sec0Ref}
-            id="section-exterior"
-            className="absolute inset-0 w-full h-full pointer-events-none"
-          >
-            <video
-              ref={v0Ref}
-              src="/videos/01-car.mp4"
-              playsInline
-              muted
-              preload="auto"
-              autoPlay={false}
-              tabIndex={-1}
-              aria-hidden="true"
-              className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none will-change-transform will-change-[filter,opacity]"
-              style={{
-                width: "100vw",
-                height: "100svh",
-                objectFit: "cover",
-              }}
-            />
-          </div>
-
-          {/* ======================================================== */}
-          {/* SCENE 02: WOMAN + CAR EXPERIENCE                         */}
-          {/* ======================================================== */}
-          <div
-            ref={sec1Ref}
-            id="section-02"
-            className="absolute inset-0 w-full h-full pointer-events-none"
-          >
-            <video
-              ref={v1Ref}
-              src="/videos/02-woman.mp4"
-              playsInline
-              muted
-              preload="auto"
-              autoPlay={false}
-              tabIndex={-1}
-              aria-hidden="true"
-              className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none will-change-transform will-change-[filter,opacity]"
-              style={{
-                width: "100vw",
-                height: "100svh",
-                objectFit: "cover",
-              }}
-            />
-          </div>
-
-          {/* ======================================================== */}
-          {/* SCENE 03: ENGINE / PERFORMANCE                           */}
-          {/* ======================================================== */}
-          <div
-            ref={sec2Ref}
-            id="section-03"
-            className="absolute inset-0 w-full h-full pointer-events-none"
-          >
-            <video
-              ref={v2Ref}
-              src="/videos/03-engine.mp4"
-              playsInline
-              muted
-              preload="auto"
-              autoPlay={false}
-              tabIndex={-1}
-              aria-hidden="true"
-              className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none will-change-transform will-change-[filter,opacity]"
-              style={{
-                width: "100vw",
-                height: "100svh",
-                objectFit: "cover",
-              }}
-            />
-          </div>
-
-          {/* ======================================================== */}
-          {/* SCENE 04: LUXURY INTERIOR                                */}
-          {/* ======================================================== */}
-          <div
-            ref={sec3Ref}
-            id="section-04"
-            className="absolute inset-0 w-full h-full pointer-events-none"
-          >
-            <video
-              ref={v3Ref}
-              src="/videos/04-interior.mp4"
-              playsInline
-              muted
-              preload="auto"
-              autoPlay={false}
-              tabIndex={-1}
-              aria-hidden="true"
-              className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none will-change-transform will-change-[filter,opacity]"
-              style={{
-                width: "100vw",
-                height: "100svh",
-                objectFit: "cover",
-              }}
-            />
-          </div>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* CINEMATIC TEXTURE & VIGNETTE OVERLAYS (Black / White / Subtle Gray)      */}
-        {/* ========================================================================= */}
-        {/* Film grain texture */}
-        <div className="film-grain z-[8] pointer-events-none" />
-
-        {/* Luxury Vignette (Hero remains clear, edges darkened) */}
-        <div
-          className="absolute inset-0 pointer-events-none z-[9]"
-          style={{
-            background:
-              "radial-gradient(circle at 60% 50%, rgba(5,5,5,0) 38%, rgba(5,5,5,0.45) 75%, rgba(5,5,5,0.88) 100%)",
-          }}
-        />
-
-        {/* Minimal Left Radial Mask for Text Legibility */}
-        <div
-          className="absolute inset-0 pointer-events-none z-[10]"
-          style={{
-            background:
-              "linear-gradient(90deg, rgba(5,5,5,0.78) 0%, rgba(5,5,5,0.35) 45%, transparent 80%)",
-          }}
-        />
-
-        {/* ========================================================================= */}
-        {/* 4 EDITORIAL CONTENT & TYPOGRAPHY OVERLAYS                                */}
-        {/* ========================================================================= */}
-
-        {/* --- SCENE 01 CONTENT: 01 / EXTERIOR | THE MACHINE | "Designed to be noticed." --- */}
-        <div
-          ref={text0Ref}
-          className="absolute left-6 sm:left-14 md:left-20 lg:left-28 bottom-16 sm:bottom-20 md:bottom-24 z-[15] max-w-2xl pointer-events-none select-none will-change-transform will-change-[opacity]"
-        >
-          <div className="flex items-center gap-3 mb-3 sm:mb-4">
-            <span className="font-mono text-xs sm:text-sm tracking-[0.35em] text-neutral-400 uppercase font-light">
-              01 / EXTERIOR
-            </span>
-            <span className="w-10 h-[1px] bg-white/20" />
-          </div>
-          <h1 className="font-display text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-light tracking-tight text-white uppercase leading-[0.88] drop-shadow-[0_4px_24px_rgba(0,0,0,0.85)] mb-4 sm:mb-5">
-            THE MACHINE
-          </h1>
-          <p className="font-editorial text-xl sm:text-2xl md:text-3xl text-neutral-200 font-light italic tracking-wide drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
-            &ldquo;Designed to be noticed.&rdquo;
-          </p>
-        </div>
-
-        {/* Initial Scroll Cue */}
-        <div
-          ref={prompt0Ref}
-          className="absolute bottom-8 left-6 sm:left-14 md:left-20 lg:left-28 z-[15] flex items-center gap-3 pointer-events-none select-none text-white/40 will-change-[opacity]"
-        >
-          <span className="font-mono text-[10px] tracking-[0.3em] uppercase">
-            SCROLL TO EXPLORE
-          </span>
-          <div className="w-8 h-[1px] bg-white/30" />
-        </div>
-
-        {/* --- SCENE 02 CONTENT: 02 / EXPERIENCE | THE EXPERIENCE | "Meet the machine." --- */}
-        <div
-          ref={text1Ref}
-          className="absolute left-6 sm:left-14 md:left-20 lg:left-28 bottom-16 sm:bottom-20 md:bottom-24 z-[15] max-w-2xl pointer-events-none select-none will-change-transform will-change-[opacity]"
-        >
-          <div className="flex items-center gap-3 mb-3 sm:mb-4">
-            <span className="font-mono text-xs sm:text-sm tracking-[0.35em] text-neutral-400 uppercase font-light">
-              02 / EXPERIENCE
-            </span>
-            <span className="w-10 h-[1px] bg-white/20" />
-          </div>
-          <h2 className="font-display text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-light tracking-tight text-white uppercase leading-[0.88] drop-shadow-[0_4px_24px_rgba(0,0,0,0.85)] mb-4 sm:mb-5">
-            THE EXPERIENCE
-          </h2>
-          <p className="font-editorial text-xl sm:text-2xl md:text-3xl text-neutral-200 font-light italic tracking-wide drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
-            &ldquo;Meet the machine.&rdquo;
-          </p>
-        </div>
-
-        {/* --- SCENE 03 CONTENT: 03 / PERFORMANCE | PERFORMANCE | "Power meets precision." + SPECS --- */}
-        <div
-          ref={text2Ref}
-          className="absolute left-6 sm:left-14 md:left-20 lg:left-28 bottom-16 sm:bottom-20 md:bottom-24 z-[15] max-w-2xl pointer-events-none select-none will-change-transform will-change-[opacity]"
-        >
-          <div className="flex items-center gap-3 mb-3 sm:mb-4">
-            <span className="font-mono text-xs sm:text-sm tracking-[0.35em] text-neutral-400 uppercase font-light">
-              03 / PERFORMANCE
-            </span>
-            <span className="w-10 h-[1px] bg-white/20" />
-          </div>
-          <h2 className="font-display text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-light tracking-tight text-white uppercase leading-[0.88] drop-shadow-[0_4px_24px_rgba(0,0,0,0.85)] mb-4 sm:mb-5">
-            PERFORMANCE
-          </h2>
-          <p className="font-editorial text-xl sm:text-2xl md:text-3xl text-neutral-200 font-light italic tracking-wide drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
-            &ldquo;Power meets precision.&rdquo;
-          </p>
-
-          {/* Minimal Staggered Specifications */}
-          <div
-            ref={specs2Ref}
-            className="flex flex-wrap items-center gap-6 sm:gap-10 mt-7 sm:mt-9 pt-6 border-t border-white/10"
-          >
-            {specsData.map((spec) => {
-              const parts = spec.value.split(" ");
-              const val = parts[0];
-              const unit = parts.slice(1).join(" ");
-
-              return (
-                <div key={spec.label} className="spec-item flex flex-col">
-                  <span className="font-mono text-[9px] sm:text-[10px] tracking-[0.32em] text-neutral-400 uppercase mb-1 font-light">
-                    {spec.label}
-                  </span>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="font-display text-2xl sm:text-3xl font-light text-white tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
-                      {val}
-                    </span>
-                    {unit && (
-                      <span className="font-mono text-[10px] sm:text-xs text-neutral-400 tracking-wider">
-                        {unit}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* --- SCENE 04 CONTENT: 04 / INTERIOR | THE CABIN | "Step inside." --- */}
-        <div
-          ref={text3Ref}
-          className="absolute left-6 sm:left-14 md:left-20 lg:left-28 bottom-16 sm:bottom-20 md:bottom-24 z-[15] max-w-2xl pointer-events-none select-none will-change-transform will-change-[opacity]"
-        >
-          <div className="flex items-center gap-3 mb-3 sm:mb-4">
-            <span className="font-mono text-xs sm:text-sm tracking-[0.35em] text-neutral-400 uppercase font-light">
-              04 / INTERIOR
-            </span>
-            <span className="w-10 h-[1px] bg-white/20" />
-          </div>
-          <h2 className="font-display text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-light tracking-tight text-white uppercase leading-[0.88] drop-shadow-[0_4px_24px_rgba(0,0,0,0.85)] mb-4 sm:mb-5">
-            THE CABIN
-          </h2>
-          <p className="font-editorial text-xl sm:text-2xl md:text-3xl text-neutral-200 font-light italic tracking-wide drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
-            &ldquo;Step inside.&rdquo;
-          </p>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* FINAL HERO CLIMAX: THE NEW EXPERIENCE / "Made to move you." / CTA         */}
-        {/* Slow, Elegant, Minimal, Cinematic (Ending of luxury automotive ad)       */}
-        {/* ========================================================================= */}
-        <div
-          ref={hero3Ref}
-          className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-6 select-none will-change-transform will-change-[opacity]"
-        >
-          {/* Subtle Radial Focus Mask behind Final Hero */}
-          <div
-            className="absolute inset-0 pointer-events-none z-[-1]"
+            className="absolute inset-0 pointer-events-none z-[5]"
             style={{
               background:
-                "radial-gradient(circle at 50% 50%, rgba(5,5,5,0.45) 0%, rgba(5,5,5,0.78) 60%, rgba(5,5,5,0.95) 100%)",
+                "linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.35) 100%)",
             }}
           />
 
-          <div className="max-w-3xl flex flex-col items-center">
-            {/* Tag / Category */}
-            <span className="text-xs sm:text-sm font-mono tracking-[0.35em] text-neutral-400 uppercase mb-4 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] font-light">
-              THE NEW EXPERIENCE
+          {/* Minimal Overlay Text: 01 / EXTERIOR | THE MACHINE | "Designed to be noticed." */}
+          <div
+            ref={text0Ref}
+            className="absolute left-6 sm:left-14 md:left-20 lg:left-28 bottom-16 sm:bottom-20 md:bottom-24 z-[15] max-w-2xl pointer-events-none select-none will-change-transform will-change-[opacity]"
+          >
+            <div className="flex items-center gap-3 mb-3 sm:mb-4">
+              <span className="font-mono-tech text-xs sm:text-sm tracking-[0.35em] text-neutral-400 uppercase font-light">
+                01 / EXTERIOR
+              </span>
+              <span className="w-10 h-[1px] bg-white/20" />
+            </div>
+            <h1 className="font-display text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-light tracking-tight text-white uppercase leading-[0.88] drop-shadow-[0_4px_24px_rgba(0,0,0,0.85)] mb-4 sm:mb-5">
+              THE MACHINE
+            </h1>
+            <p className="font-editorial text-xl sm:text-2xl md:text-3xl text-neutral-200 font-light italic tracking-wide drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
+              &ldquo;Designed to be noticed.&rdquo;
+            </p>
+          </div>
+
+          {/* Subtle scroll cue */}
+          <div
+            ref={cue0Ref}
+            onClick={() => navigateToSection(1)}
+            className="absolute bottom-8 left-6 sm:left-14 md:left-20 lg:left-28 z-[15] flex items-center gap-3 text-white/40 hover:text-white/80 transition-colors cursor-pointer select-none"
+            aria-label="Scroll to Section 02"
+          >
+            <span className="font-mono-tech text-[10px] tracking-[0.3em] uppercase">
+              SCROLL TO EXPLORE
             </span>
+            <ChevronDown className="w-3.5 h-3.5 animate-bounce" />
+          </div>
+        </section>
 
-            {/* Editorial Headline */}
-            <h2 className="font-display text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-light tracking-tight text-white uppercase leading-tight mb-5 drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)]">
-              &ldquo;Made to move you.&rdquo;
+        {/* ===================================================================== */}
+        {/* SECTION 02 — WOMAN + CAR                                              */}
+        {/* ===================================================================== */}
+        <section
+          ref={sec1Ref}
+          id="section-02"
+          data-section="experience"
+          className="absolute inset-0 w-full h-full will-change-transform will-change-[filter,opacity]"
+        >
+          {/* Full-screen Video 02: Plays normally from 0s to end, loop, autoplay, muted */}
+          <video
+            ref={v1Ref}
+            src="/videos/02-woman.mp4"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            tabIndex={-1}
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none will-change-transform will-change-[filter,opacity]"
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+
+          {/* Subtle Cinematic Overlay */}
+          <div
+            className="absolute inset-0 pointer-events-none z-[5]"
+            style={{
+              background:
+                "linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.35) 100%)",
+            }}
+          />
+
+          {/* Minimal Text: 02 / EXPERIENCE | THE EXPERIENCE | "Meet the machine." */}
+          <div
+            ref={text1Ref}
+            className="absolute left-6 sm:left-14 md:left-20 lg:left-28 bottom-16 sm:bottom-20 md:bottom-24 z-[15] max-w-2xl pointer-events-none select-none will-change-transform will-change-[opacity]"
+          >
+            <div className="flex items-center gap-3 mb-3 sm:mb-4">
+              <span className="font-mono-tech text-xs sm:text-sm tracking-[0.35em] text-neutral-400 uppercase font-light">
+                02 / EXPERIENCE
+              </span>
+              <span className="w-10 h-[1px] bg-white/20" />
+            </div>
+            <h2 className="font-display text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-light tracking-tight text-white uppercase leading-[0.88] drop-shadow-[0_4px_24px_rgba(0,0,0,0.85)] mb-4 sm:mb-5">
+              THE EXPERIENCE
             </h2>
+            <p className="font-editorial text-xl sm:text-2xl md:text-3xl text-neutral-200 font-light italic tracking-wide drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
+              &ldquo;Meet the machine.&rdquo;
+            </p>
+          </div>
+        </section>
 
-            {/* Minimal Luxury Divider */}
-            <div className="w-16 h-[1px] bg-white/30 my-6" />
+        {/* ===================================================================== */}
+        {/* SECTION 03 — ENGINE / PERFORMANCE                                     */}
+        {/* ===================================================================== */}
+        <section
+          ref={sec2Ref}
+          id="section-03"
+          data-section="performance"
+          className="absolute inset-0 w-full h-full will-change-transform will-change-[filter,opacity]"
+        >
+          {/* Full-screen Video 03: Plays normally from 0s to end, loop, autoplay, muted */}
+          <video
+            ref={v2Ref}
+            src="/videos/03-engine.mp4"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            tabIndex={-1}
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none will-change-transform will-change-[filter,opacity]"
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
 
-            {/* Premium CTA: EXPLORE THE CAR */}
-            {/* White outline button, on hover: background becomes white, text becomes black */}
+          {/* Subtle Cinematic Overlay */}
+          <div
+            className="absolute inset-0 pointer-events-none z-[5]"
+            style={{
+              background:
+                "linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.35) 100%)",
+            }}
+          />
+
+          {/* Minimal Text: 03 / PERFORMANCE | PERFORMANCE | "Power meets precision." */}
+          <div
+            ref={text2Ref}
+            className="absolute left-6 sm:left-14 md:left-20 lg:left-28 bottom-16 sm:bottom-20 md:bottom-24 z-[15] max-w-2xl pointer-events-none select-none will-change-transform will-change-[opacity]"
+          >
+            <div className="flex items-center gap-3 mb-3 sm:mb-4">
+              <span className="font-mono-tech text-xs sm:text-sm tracking-[0.35em] text-neutral-400 uppercase font-light">
+                03 / PERFORMANCE
+              </span>
+              <span className="w-10 h-[1px] bg-white/20" />
+            </div>
+            <h2 className="font-display text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-light tracking-tight text-white uppercase leading-[0.88] drop-shadow-[0_4px_24px_rgba(0,0,0,0.85)] mb-4 sm:mb-5">
+              PERFORMANCE
+            </h2>
+            <p className="font-editorial text-xl sm:text-2xl md:text-3xl text-neutral-200 font-light italic tracking-wide drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
+              &ldquo;Power meets precision.&rdquo;
+            </p>
+
+            {/* Configured Specifications: POWER 000 HP | TORQUE 000 Nm | DRIVE AWD */}
+            <div
+              ref={specs2Ref}
+              className="flex flex-wrap items-center gap-6 sm:gap-10 mt-6 sm:mt-8 pt-5 border-t border-white/10"
+            >
+              {specsData.map((spec) => {
+                const parts = spec.value.split(" ");
+                const val = parts[0];
+                const unit = parts.slice(1).join(" ");
+
+                return (
+                  <div key={spec.label} data-spec-item className="spec-item flex flex-col">
+                    <span className="font-mono-tech text-[9px] sm:text-[10px] tracking-[0.32em] text-neutral-400 uppercase mb-1 font-light">
+                      {spec.label}
+                    </span>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="font-display text-2xl sm:text-3xl font-light text-white tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                        {val}
+                      </span>
+                      {unit && (
+                        <span className="font-mono-tech text-[10px] sm:text-xs text-neutral-400 tracking-wider">
+                          {unit}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* ===================================================================== */}
+        {/* SECTION 04 — INTERIOR                                                 */}
+        {/* ===================================================================== */}
+        <section
+          ref={sec3Ref}
+          id="section-04"
+          data-section="interior"
+          className="absolute inset-0 w-full h-full will-change-transform will-change-[opacity]"
+        >
+          {/* Full-screen Video 04: Plays normally from 0s to end, loop, autoplay, muted */}
+          <video
+            ref={v3Ref}
+            src="/videos/04-interior.mp4"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            tabIndex={-1}
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none will-change-transform will-change-[opacity]"
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+
+          {/* Subtle Cinematic Overlay */}
+          <div
+            className="absolute inset-0 pointer-events-none z-[5]"
+            style={{
+              background:
+                "linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.35) 100%)",
+            }}
+          />
+
+          {/* Minimal Text: 04 / INTERIOR | THE CABIN | "Step inside." */}
+          <div
+            ref={text3Ref}
+            className="absolute left-6 sm:left-14 md:left-20 lg:left-28 bottom-16 sm:bottom-20 md:bottom-24 z-[15] max-w-xl pointer-events-none select-none will-change-transform will-change-[opacity]"
+          >
+            <div className="flex items-center gap-3 mb-3 sm:mb-4">
+              <span className="font-mono-tech text-xs sm:text-sm tracking-[0.35em] text-neutral-400 uppercase font-light">
+                04 / INTERIOR
+              </span>
+              <span className="w-10 h-[1px] bg-white/20" />
+            </div>
+            <h2 className="font-display text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-light tracking-tight text-white uppercase leading-[0.88] drop-shadow-[0_4px_24px_rgba(0,0,0,0.85)] mb-4 sm:mb-5">
+              THE CABIN
+            </h2>
+            <p className="font-editorial text-xl sm:text-2xl md:text-3xl text-neutral-200 font-light italic tracking-wide drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
+              &ldquo;Step inside.&rdquo;
+            </p>
+          </div>
+
+          {/* Final Section Climax: THE NEW EXPERIENCE | "Made to move you." | EXPLORE THE CAR */}
+          <div
+            ref={hero3Ref}
+            className="absolute right-6 sm:right-14 md:right-20 lg:right-28 bottom-16 sm:bottom-20 md:bottom-24 z-[20] max-w-md text-left sm:text-right pointer-events-auto will-change-transform will-change-[opacity]"
+          >
+            <div className="flex items-center sm:justify-end gap-3 mb-2">
+              <span className="font-mono-tech text-[10px] tracking-[0.3em] text-neutral-400 uppercase font-light">
+                THE NEW EXPERIENCE
+              </span>
+              <span className="hidden sm:inline-block w-8 h-[1px] bg-white/20" />
+            </div>
+            <p className="font-editorial text-xl sm:text-2xl text-neutral-200 font-light italic mb-5 drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
+              &ldquo;Made to move you.&rdquo;
+            </p>
             <button
               onClick={onExplore}
-              className="group relative inline-flex items-center justify-center gap-4 px-9 py-4 sm:px-12 sm:py-5 border border-white text-white bg-transparent hover:bg-white hover:text-black transition-all duration-300 font-mono text-xs sm:text-sm font-medium tracking-[0.3em] uppercase rounded-sm cursor-pointer shadow-[0_0_25px_rgba(255,255,255,0.12)] hover:shadow-[0_0_40px_rgba(255,255,255,0.4)] hover:scale-105 active:scale-95 pointer-events-auto"
               aria-label="Explore the car"
+              className="group inline-flex items-center gap-3 px-8 py-3.5 bg-white text-black font-mono-tech text-xs font-semibold tracking-[0.25em] uppercase rounded-sm hover:bg-neutral-200 transition-all duration-300 shadow-[0_4px_20px_rgba(255,255,255,0.15)] cursor-pointer"
             >
               <span>EXPLORE THE CAR</span>
-              <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
             </button>
-
-            <span className="text-[10px] font-mono tracking-[0.25em] text-white/40 uppercase mt-7 drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)] font-light">
-              INSPECT FULL SPECIFICATIONS & BESPOKE COMMISSIONS
-            </span>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

@@ -13,20 +13,20 @@ export default function Navbar({
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 40);
+      setScrolled(window.scrollY > 25 || activeStage > 0);
     };
 
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [activeStage]);
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-40 transition-all duration-700 ease-out px-6 sm:px-10 md:px-14 flex items-center justify-between pointer-events-auto ${
-        scrolled
-          ? "py-3 sm:py-4 bg-black/25 backdrop-blur-[18px] border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.5)]"
-          : "py-6 sm:py-7 bg-transparent border-b border-transparent"
+      className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ease-out px-6 sm:px-10 md:px-14 flex items-center justify-between pointer-events-auto ${
+        scrolled || activeStage > 0
+          ? "py-3 sm:py-3.5 bg-[rgba(0,0,0,0.35)] backdrop-blur-[18px] border-b border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
+          : "py-5 sm:py-6 bg-transparent border-b border-transparent"
       }`}
     >
       {/* Left: CAR NAME */}
@@ -36,7 +36,7 @@ export default function Navbar({
           className="group text-left focus:outline-none cursor-pointer"
           aria-label={`${carConfig.name} Home`}
         >
-          <span className="font-display font-medium tracking-[0.35em] text-sm sm:text-base text-white group-hover:text-white/80 transition-colors">
+          <span className="font-display font-light tracking-[0.35em] text-sm sm:text-base text-white group-hover:text-white/80 transition-colors uppercase">
             {carConfig.name}
           </span>
           <span className="hidden lg:inline-block ml-3 px-2 py-0.5 text-[9px] font-mono-tech tracking-[0.25em] text-white/40 border border-white/10 rounded-sm">
@@ -45,9 +45,9 @@ export default function Navbar({
         </button>
       </div>
 
-      {/* Center: Stage Nav Items (01 CAR, 02 EXPERIENCE, 03 PERFORMANCE, 04 INTERIOR) */}
+      {/* Center: EXTERIOR | EXPERIENCE | PERFORMANCE | INTERIOR */}
       <nav
-        className="hidden md:flex items-center gap-6 lg:gap-10"
+        className="hidden md:flex items-center gap-8 lg:gap-10"
         aria-label="Automotive Stages"
       >
         {carConfig.navItems.map((item, idx) => {
@@ -56,7 +56,7 @@ export default function Navbar({
             <button
               key={item.id}
               onClick={() => onNavigate(idx)}
-              className={`relative py-1 text-xs tracking-[0.22em] uppercase transition-all duration-300 focus:outline-none cursor-pointer ${
+              className={`relative py-1 text-xs tracking-[0.25em] uppercase transition-all duration-300 focus:outline-none cursor-pointer ${
                 isActive
                   ? "text-white font-medium"
                   : "text-white/40 hover:text-white/80 font-normal"
@@ -64,7 +64,7 @@ export default function Navbar({
             >
               <span>{item.shortLabel || item.label}</span>
               {isActive && (
-                <span className="absolute -bottom-1 left-0 w-full h-[1px] bg-white transition-all duration-300 shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+                <span className="absolute -bottom-1 left-0 w-full h-[1px] bg-white transition-all duration-300 shadow-[0_0_8px_rgba(255,255,255,0.7)]" />
               )}
             </button>
           );
@@ -72,7 +72,7 @@ export default function Navbar({
       </nav>
 
       {/* Right: Sound Toggle & MENU */}
-      <div className="flex items-center gap-3 sm:gap-5">
+      <div className="flex items-center gap-3 sm:gap-4">
         {onToggleSound && (
           <button
             onClick={onToggleSound}
@@ -99,7 +99,7 @@ export default function Navbar({
         {/* MENU */}
         <button
           onClick={onOpenMenu}
-          className="flex items-center gap-2 px-3.5 py-1.5 text-xs tracking-[0.25em] uppercase text-white/80 hover:text-white border border-white/15 hover:border-white/40 bg-black/20 hover:bg-white/10 rounded-sm backdrop-blur-md transition-all duration-300 focus:outline-none cursor-pointer"
+          className="flex items-center gap-2 px-3.5 py-1.5 text-xs tracking-[0.25em] uppercase text-white/80 hover:text-white border border-white/15 hover:border-white/40 bg-black/30 hover:bg-white/10 rounded-sm backdrop-blur-md transition-all duration-300 focus:outline-none cursor-pointer"
           aria-label="Open menu"
         >
           <Menu className="w-3.5 h-3.5" />

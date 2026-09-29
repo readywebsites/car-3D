@@ -36,23 +36,9 @@ export default function App() {
   const navigateToStage = useCallback((stageIndex) => {
     setActiveStage(stageIndex);
 
-    const trackIds = [
-      "section-exterior-track",
-      "section-02-track",
-      "section-03-track",
-      "section-04-track",
-    ];
-    const targetEl = document.getElementById(trackIds[stageIndex]);
-    if (targetEl) {
-      targetEl.scrollIntoView({ behavior: "smooth" });
-      return;
-    }
-
-    const container = document.getElementById("cinematic-master-story");
-    if (container) {
-      const totalScroll = container.scrollHeight - window.innerHeight;
-      const stageRatios = [0.0, 0.25, 0.50, 0.75];
-      const targetScroll = stageRatios[stageIndex] * totalScroll;
+    const totalScrollable = document.documentElement.scrollHeight - window.innerHeight;
+    if (totalScrollable > 0) {
+      const targetScroll = (stageIndex / 3) * totalScrollable;
       window.scrollTo({ top: targetScroll, behavior: "smooth" });
     }
   }, []);
@@ -94,11 +80,12 @@ export default function App() {
         />
 
         {/* ======================================================== */}
-        {/* ONE UNIFIED PREMIUM CINEMATIC SCROLL EXPERIENCE           */}
+        {/* FOUR FULL-SCREEN CINEMATIC AUTOMOTIVE SECTIONS           */}
         {/* 01 CAR -> 02 WOMAN -> 03 ENGINE -> 04 INTERIOR           */}
-        {/* Single sticky 100svh viewport, user scroll controls video */}
+        {/* Videos play normally, scrolling moves between sections    */}
         {/* ======================================================== */}
         <CinematicExperience
+          activeStage={activeStage}
           onStageChange={handleStageChange}
           onProgressChange={handleProgressChange}
           onExplore={() => setIsExploreOpen(true)}

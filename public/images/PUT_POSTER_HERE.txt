@@ -1,0 +1,3 @@
+Optional:
+Add a car poster image named car-poster.jpg here.
+It will be used as the video poster/fallback image.

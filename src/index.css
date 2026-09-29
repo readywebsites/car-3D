@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-display: "Manrope", sans-serif;
+    --font-serif: "Cinzel", Georgia, serif;
+    --font-mono: "Space Grotesk", monospace;
+  }
+
+  html {
+    background-color: #050505;
+    color: #ffffff;
+    font-family: var(--font-sans);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: #050505;
+    color: #ffffff;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background-color: #ffffff;
+    color: #000000;
+  }
+}
+
+/* Custom Typography Classes */
+.font-display {
+  font-family: "Manrope", sans-serif;
+}
+
+.font-editorial {
+  font-family: "Cinzel", Georgia, serif;
+}
+
+.font-mono-tech {
+  font-family: "Space Grotesk", monospace;
+}
+
+/* Subtle Film Grain Texture Overlay */
+.film-grain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.035;
+  z-index: 5;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* Cinematic Vignette */
+.cinematic-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(5, 5, 5, 0) 40%,
+    rgba(5, 5, 5, 0.45) 80%,
+    rgba(5, 5, 5, 0.85) 100%
+  );
+}
+
+/* Cinematic Gradient Overlays to preserve car readability */
+.cinematic-gradient-left {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  background: linear-gradient(
+    90deg,
+    rgba(5, 5, 5, 0.82) 0%,
+    rgba(5, 5, 5, 0.5) 35%,
+    rgba(5, 5, 5, 0.1) 70%,
+    transparent 100%
+  );
+}
+
+.cinematic-gradient-bottom {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  background: linear-gradient(
+    0deg,
+    rgba(5, 5, 5, 0.75) 0%,
+    rgba(5, 5, 5, 0.2) 30%,
+    transparent 60%
+  );
+}
+
+/* Audio Wave Visualizer Bars */
+.audio-bar {
+  display: inline-block;
+  width: 2px;
+  background-color: currentColor;
+  border-radius: 9999px;
+  animation: audioBounce 1.2s ease-in-out infinite;
+}
+
+.audio-bar:nth-child(1) { height: 6px; animation-delay: 0.1s; }
+.audio-bar:nth-child(2) { height: 14px; animation-delay: 0.3s; }
+.audio-bar:nth-child(3) { height: 9px; animation-delay: 0.15s; }
+.audio-bar:nth-child(4) { height: 16px; animation-delay: 0.45s; }
+
+@keyframes audioBounce {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+
+/* Glassmorphism Card Utilities */
+.glass-panel {
+  background: rgba(15, 15, 15, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-subtle {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050505;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
